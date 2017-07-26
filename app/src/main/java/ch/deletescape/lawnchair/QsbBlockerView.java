@@ -3,6 +3,7 @@ package ch.deletescape.lawnchair;
 import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.util.AttributeSet;
@@ -11,6 +12,9 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.TextView;
+
+import com.kwabenaberko.openweathermaplib.implementation.OpenWeatherMapHelper;
+import com.kwabenaberko.openweathermaplib.models.CurrentWeather;
 
 import ch.deletescape.lawnchair.config.FeatureFlags;
 import ch.deletescape.lawnchair.pixelify.OnWeatherInfoListener;
@@ -23,7 +27,6 @@ public class QsbBlockerView extends FrameLayout implements Workspace.OnStateChan
     private final Paint mBgPaint = new Paint(1);
     private int mState = 0;
     private View mView;
-    private static final boolean DEBUG = false;
 
     public QsbBlockerView(Context context, AttributeSet attributeSet) {
         super(context, attributeSet);
@@ -110,10 +113,28 @@ public class QsbBlockerView extends FrameLayout implements Workspace.OnStateChan
             if (view == null || i != 1) {
                 if (FeatureFlags.planes(getContext())) {
                     inflate = LayoutInflater.from(getContext()).inflate(R.layout.plane_widget, this, false);
-                } else if (DEBUG) {
+                } else if (FeatureFlags.weatherDebug(getContext())) {
                     inflate = LayoutInflater.from(getContext()).inflate(R.layout.weather_widget, this, false);
-                    TextView temperature = inflate.findViewById(R.id.weather_widget_temperature);
-                    temperature.setText("20°C");
+                    OpenWeatherMapHelper helper = new OpenWeatherMapHelper();
+                    helper.setAppId(BuildConfig.OPENWEATHERMAP_KEY);
+                    SharedPreferences prefs = Utilities.getPrefs(getContext());
+                    String units = prefs.getString("pref_weatherDebug_units", "metric");
+                    final boolean isImperial = units.equals("imperial");
+                    helper.setUnits(units);
+                    String city = prefs.getString("pref_weatherDebug_city", "Lucerne, CH");
+                    final TextView temperature = inflate.findViewById(R.id.weather_widget_temperature);
+                    OpenWeatherMapHelper.CurrentWeatherCallback callback = new OpenWeatherMapHelper.CurrentWeatherCallback() {
+                        @Override
+                        public void onSuccess(CurrentWeather currentWeather) {
+                            temperature.setText(currentWeather.getMain().getTemp() + (isImperial ? "°F" : "°C"));
+                        }
+
+                        @Override
+                        public void onFailure(Throwable throwable) {
+                            temperature.setText("ERROR°C");
+                        }
+                    };
+                    helper.getCurrentWeatherByCityName(city, callback);
                 } else {
                     inflate = LayoutInflater.from(getContext()).inflate(R.layout.date_widget, this, false);
                 }
