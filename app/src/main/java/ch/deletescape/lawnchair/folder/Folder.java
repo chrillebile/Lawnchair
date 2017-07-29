@@ -34,6 +34,7 @@ import android.util.Log;
 import android.view.ActionMode;
 import android.view.FocusFinder;
 import android.view.KeyEvent;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
@@ -226,10 +227,10 @@ public class Folder extends LinearLayout implements DragSource, View.OnClickList
         // reliable behavior when clicking the text field (since it will always gain focus on click).
         setFocusableInTouchMode(true);
 
-        if (BlurWallpaperProvider.isEnabled()) {
+        if (BlurWallpaperProvider.Companion.isEnabled(BlurWallpaperProvider.Companion.getBLUR_FOLDER())) {
             int tintColor = Utilities.resolveAttributeData(context, R.attr.folderBgColorBlur);
 
-            mBlurDrawable = BlurWallpaperProvider.getInstance().createDrawable(
+            mBlurDrawable = BlurWallpaperProvider.Companion.getInstance().createDrawable(
                     res.getDimensionPixelSize(R.dimen.folder_background_radius), false);
             mBlurDrawable.setBlurredView(mLauncher.getWorkspace());
             mBlurDrawable.setShouldProvideOutline(true);
@@ -255,6 +256,7 @@ public class Folder extends LinearLayout implements DragSource, View.OnClickList
             }
         });
         mFolderName.setOnFocusChangeListener(this);
+        mFolderName.setEnabled(!mLauncher.isEditingDisabled());
 
         if (!Utilities.ATLEAST_MARSHMALLOW) {
             // We disable action mode in older OSes where floating selection menu is not yet
@@ -514,7 +516,7 @@ public class Folder extends LinearLayout implements DragSource, View.OnClickList
      */
     @SuppressLint("InflateParams")
     static Folder fromXml(Launcher launcher) {
-        return (Folder) launcher.getLayoutInflater().inflate(R.layout.user_folder_icon_normalized, null);
+        return (Folder) LayoutInflater.from(FeatureFlags.INSTANCE.applyDarkTheme(launcher, FeatureFlags.INSTANCE.getDARK_FOLDER())).inflate(R.layout.user_folder_icon_normalized, null);
     }
 
     private void prepareReveal() {

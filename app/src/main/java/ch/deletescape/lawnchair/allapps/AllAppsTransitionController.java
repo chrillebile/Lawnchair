@@ -106,14 +106,16 @@ public class AllAppsTransitionController implements TouchController, VerticalPul
         mShiftRange = DEFAULT_SHIFT_RANGE;
         mProgress = 1f;
         mEvaluator = new ArgbEvaluator();
-        mAllAppsBackgroundColor = Utilities.resolveAttributeData(l, R.attr.allAppsContainerColor);
-        mAllAppsBackgroundColorBlur = Utilities.resolveAttributeData(l, R.attr.allAppsContainerColorBlur);
-        mTransparentHotseat = FeatureFlags.isTransparentHotseat(l);
-        mLightStatusBar = FeatureFlags.lightStatusBar(l);
+        mAllAppsBackgroundColor = Utilities
+                .resolveAttributeData(FeatureFlags.INSTANCE.applyDarkTheme(l, FeatureFlags.INSTANCE.getDARK_ALLAPPS()), R.attr.allAppsContainerColor);
+        mAllAppsBackgroundColorBlur = Utilities
+                .resolveAttributeData(FeatureFlags.INSTANCE.applyDarkTheme(l, FeatureFlags.INSTANCE.getDARK_BLUR()), R.attr.allAppsContainerColorBlur);
+        mTransparentHotseat = FeatureFlags.INSTANCE.isTransparentHotseat(l);
+        mLightStatusBar = FeatureFlags.INSTANCE.lightStatusBar(l);
     }
 
     public void updateLightStatusBar(Context context) {
-        mLightStatusBar = FeatureFlags.lightStatusBar(context);
+        mLightStatusBar = FeatureFlags.INSTANCE.lightStatusBar(context);
         updateLightStatusBar(mProgress * mShiftRange);
     }
 
@@ -123,9 +125,9 @@ public class AllAppsTransitionController implements TouchController, VerticalPul
     }
 
     private int getAppIconTextColor(Context context, int allAppsAlpha) {
-        if (FeatureFlags.useDarkTheme) {
+        if (FeatureFlags.INSTANCE.useDarkTheme(FeatureFlags.INSTANCE.getDARK_ALLAPPS())) {
             return Color.WHITE;
-        } else if ((allAppsAlpha < 128 && !BlurWallpaperProvider.isEnabled()) || allAppsAlpha < 50) {
+        } else if ((allAppsAlpha < 128 && !BlurWallpaperProvider.Companion.isEnabled(BlurWallpaperProvider.Companion.getBLUR_ALLAPPS())) || allAppsAlpha < 50) {
             return Color.WHITE;
         } else {
             return context.getResources().getColor(R.color.quantum_panel_text_color);
@@ -284,20 +286,21 @@ public class AllAppsTransitionController implements TouchController, VerticalPul
     }
 
     private void updateLightStatusBar(float shift) {
-        boolean darkStatusBar = FeatureFlags.useDarkTheme ||
-                (BlurWallpaperProvider.isEnabled() &&
+        boolean useDarkTheme = FeatureFlags.INSTANCE.useDarkTheme(FeatureFlags.INSTANCE.getDARK_ALLAPPS());
+        boolean darkStatusBar = useDarkTheme ||
+                (BlurWallpaperProvider.Companion.isEnabled(BlurWallpaperProvider.Companion.getBLUR_ALLAPPS()) &&
                 !mLauncher.getExtractedColors().isLightStatusBar() &&
                 allAppsAlpha < 52);
 
-        boolean darkNavigationBar = FeatureFlags.useDarkTheme ||
-                (BlurWallpaperProvider.isEnabled() &&
+        boolean darkNavigationBar = useDarkTheme ||
+                (BlurWallpaperProvider.Companion.isEnabled(BlurWallpaperProvider.Companion.getBLUR_ALLAPPS()) &&
                 !mLauncher.getExtractedColors().isLightNavigationBar() &&
                 allAppsAlpha < 52);
 
         if (Utilities.ATLEAST_MARSHMALLOW) {
             // Use a light status bar (dark icons) if all apps is behind at least half of the status
             // bar. If the status bar is already light due to wallpaper extraction, keep it that way.
-            boolean activate = shift <= mStatusBarHeight / 2;
+            boolean activate = !mLauncher.getDeviceProfile().isVerticalBarLayout() && shift <= mStatusBarHeight / 2;
             mLauncher.activateLightStatusBar(activate ? !darkStatusBar : mLightStatusBar);
             mLauncher.activateLightNavigationBar(!darkNavigationBar && activate);
         } else {
@@ -318,24 +321,32 @@ public class AllAppsTransitionController implements TouchController, VerticalPul
 
         int allAppsBg = ColorUtils.setAlphaComponent(mAllAppsBackgroundColor, allAppsAlpha);
         int allAppsBgBlur = mAllAppsBackgroundColorBlur + (allAppsAlpha << 24);
+        boolean blurEnabled = BlurWallpaperProvider.Companion.isEnabled(BlurWallpaperProvider.Companion.getBLUR_ALLAPPS());
         int color = (int) mEvaluator.evaluate(
                 Math.max(mDecelInterpolator.getInterpolation(alpha), 0),
-                BlurWallpaperProvider.isEnabled() ? mAllAppsBackgroundColorBlur : mHotseatBackgroundColor,
-                BlurWallpaperProvider.isEnabled() ? allAppsBgBlur : allAppsBg);
+                blurEnabled ? mAllAppsBackgroundColorBlur : mHotseatBackgroundColor,
+                blurEnabled ? allAppsBgBlur : allAppsBg);
         if (mTransparentHotseat) {
-            mAppsView.setRevealDrawableColor(BlurWallpaperProvider.isEnabled() ? allAppsBgBlur : color);
+            mAppsView.setRevealDrawableColor(blurEnabled ? allAppsBgBlur : color);
             mAppsView.setBlurOpacity((int) (alpha * 255));
         } else {
             mAppsView.setRevealDrawableColor(color);
         }
-        if (BlurWallpaperProvider.isEnabled()) {
+        if (blurEnabled) {
             mAppsView.setWallpaperTranslation(shiftCurrent);
             mHotseat.setWallpaperTranslation(shiftCurrent);
         }
         mAppsView.getContentView().setAlpha(alpha);
         mAppsView.setTranslationY(shiftCurrent);
-        mWorkspace.setHotseatTranslationAndAlpha(Workspace.Direction.Y, -mShiftRange + shiftCurrent,
-                interpolation);
+
+        if (!mLauncher.getDeviceProfile().isVerticalBarLayout()) {
+            mWorkspace.setHotseatTranslationAndAlpha(Workspace.Direction.Y, -mShiftRange + shiftCurrent,
+                    interpolation);
+        } else {
+            mWorkspace.setHotseatTranslationAndAlpha(Workspace.Direction.Y,
+                    PARALLAX_COEFFICIENT * (-mShiftRange + shiftCurrent),
+                    interpolation);
+        }
 
         if (mIsTranslateWithoutWorkspace) {
             return;
@@ -538,7 +549,11 @@ public class AllAppsTransitionController implements TouchController, VerticalPul
     @Override
     public void onLayoutChange(View v, int left, int top, int right, int bottom,
                                int oldLeft, int oldTop, int oldRight, int oldBottom) {
-        mShiftRange = top;
+        if (!mLauncher.getDeviceProfile().isVerticalBarLayout()) {
+            mShiftRange = top;
+        } else {
+            mShiftRange = bottom;
+        }
         setProgress(mProgress);
     }
 

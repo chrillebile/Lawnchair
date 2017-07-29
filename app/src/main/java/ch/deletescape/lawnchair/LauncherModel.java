@@ -779,7 +779,7 @@ public class LauncherModel extends BroadcastReceiver
         if (context instanceof Launcher && screenId < 0 &&
                 container == LauncherSettings.Favorites.CONTAINER_HOTSEAT) {
             item.screenId = Launcher.getLauncher(context).getHotseat()
-                    .getOrderInHotseat(cellX);
+                    .getOrderInHotseat(cellX, cellY);
         } else {
             item.screenId = screenId;
         }
@@ -812,8 +812,8 @@ public class LauncherModel extends BroadcastReceiver
             // in the hotseat
             if (context instanceof Launcher && screen < 0 &&
                     container == LauncherSettings.Favorites.CONTAINER_HOTSEAT) {
-                item.screenId = Launcher.getLauncher(context).getHotseat().getOrderInHotseat(item.cellX
-                );
+                item.screenId = Launcher.getLauncher(context).getHotseat()
+                        .getOrderInHotseat(item.cellX, item.cellY);
             } else {
                 item.screenId = screen;
             }
@@ -846,7 +846,7 @@ public class LauncherModel extends BroadcastReceiver
         if (context instanceof Launcher && screenId < 0 &&
                 container == LauncherSettings.Favorites.CONTAINER_HOTSEAT) {
             item.screenId = Launcher.getLauncher(context).getHotseat()
-                    .getOrderInHotseat(cellX);
+                    .getOrderInHotseat(cellX, cellY);
         } else {
             item.screenId = screenId;
         }
@@ -929,7 +929,7 @@ public class LauncherModel extends BroadcastReceiver
         if (context instanceof Launcher && screenId < 0 &&
                 container == LauncherSettings.Favorites.CONTAINER_HOTSEAT) {
             item.screenId = Launcher.getLauncher(context).getHotseat()
-                    .getOrderInHotseat(cellX);
+                    .getOrderInHotseat(cellX, cellY);
         } else {
             item.screenId = screenId;
         }
@@ -1333,7 +1333,7 @@ public class LauncherModel extends BroadcastReceiver
             } else {
                 ExtractionUtils.startColorExtractionService(context);
             }
-            BlurWallpaperProvider.getInstance().updateAsync();
+            BlurWallpaperProvider.Companion.getInstance().updateAsync();
         }
     }
 
@@ -1696,7 +1696,7 @@ public class LauncherModel extends BroadcastReceiver
                 if (item.screenId == Workspace.FIRST_SCREEN_ID) {
                     // Mark the first row as occupied (if the feature is enabled)
                     // in order to account for the QSB.
-                    screen.markCells(0, 0, countX + 1, 1, FeatureFlags.showPixelBar(mContext));
+                    screen.markCells(0, 0, countX + 1, 1, FeatureFlags.INSTANCE.showPixelBar(mContext));
                 }
                 occupied.put(item.screenId, screen);
             }

@@ -17,6 +17,7 @@ import android.view.View.OnClickListener;
 import android.view.animation.AccelerateDecelerateInterpolator;
 import android.widget.FrameLayout;
 
+import ch.deletescape.lawnchair.DeviceProfile;
 import ch.deletescape.lawnchair.Launcher;
 import ch.deletescape.lawnchair.R;
 import ch.deletescape.lawnchair.Utilities;
@@ -41,13 +42,13 @@ public abstract class BaseQsbView extends FrameLayout implements OnClickListener
     protected abstract int getQsbView(boolean withMic);
 
     public BaseQsbView(Context context, AttributeSet attributeSet, int i) {
-        super(context, attributeSet, i);
+        super(FeatureFlags.INSTANCE.applyDarkTheme(context, FeatureFlags.INSTANCE.getDARK_QSB()), attributeSet, i);
         mLauncher = Launcher.getLauncher(context);
     }
 
     public void applyVoiceSearchPreference(SharedPreferences prefs) {
-        showMic = FeatureFlags.showVoiceSearchButton(getContext());
-        boolean useWhiteLogo = FeatureFlags.useWhiteGoogleIcon(getContext());
+        showMic = FeatureFlags.INSTANCE.showVoiceSearchButton(getContext());
+        boolean useWhiteLogo = FeatureFlags.INSTANCE.useWhiteGoogleIcon(getContext());
         int qsbView = getQsbView(showMic);
         if (qsbView != mQsbViewId || mUseWhiteLogo != useWhiteLogo) {
             mQsbViewId = qsbView;
@@ -79,7 +80,7 @@ public abstract class BaseQsbView extends FrameLayout implements OnClickListener
     @Override
     protected void onAttachedToWindow() {
         super.onAttachedToWindow();
-        if (!FeatureFlags.showPixelBar(getContext())) {
+        if (!FeatureFlags.INSTANCE.showPixelBar(getContext())) {
             return;
         }
         SharedPreferences sharedPreferences = Utilities.getPrefs(getContext());
@@ -103,18 +104,20 @@ public abstract class BaseQsbView extends FrameLayout implements OnClickListener
 
     @Override
     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String str) {
-        if (FeatureFlags.KEY_SHOW_VOICE_SEARCH_BUTTON.equals(str) ||
-                FeatureFlags.KEY_PREF_WHITE_GOOGLE_ICON.equals(str)) {
+        if (FeatureFlags.INSTANCE.getKEY_SHOW_VOICE_SEARCH_BUTTON().equals(str) ||
+                FeatureFlags.INSTANCE.getKEY_PREF_WHITE_GOOGLE_ICON().equals(str)) {
             applyVoiceSearchPreference(sharedPreferences);
             applyVisibility();
         }
     }
 
     private void initializeQsbConnector() {
-        if (qsbConnector == null && !FeatureFlags.useFullWidthSearchbar(getContext()) && FeatureFlags.showGoogleNowTab(mLauncher)) {
+        DeviceProfile deviceProfile = mLauncher.getDeviceProfile();
+        if (qsbConnector == null && !FeatureFlags.INSTANCE.useFullWidthSearchbar(getContext())
+                && FeatureFlags.INSTANCE.showGoogleNowTab(mLauncher) && !deviceProfile.isLandscape && !deviceProfile.isTablet) {
             qsbConnector = (QsbConnector) mLauncher.getLayoutInflater().inflate(R.layout.qsb_connector, this, false);
             addView(qsbConnector, 0);
-        } else if (FeatureFlags.useFullWidthSearchbar(getContext()) || !FeatureFlags.showGoogleNowTab(mLauncher)) {
+        } else if (FeatureFlags.INSTANCE.useFullWidthSearchbar(getContext()) || !FeatureFlags.INSTANCE.showGoogleNowTab(mLauncher)) {
             removeView(qsbConnector);
         }
     }

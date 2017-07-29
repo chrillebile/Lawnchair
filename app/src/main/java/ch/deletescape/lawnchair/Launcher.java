@@ -36,7 +36,6 @@ import android.content.BroadcastReceiver;
 import android.content.ComponentCallbacks2;
 import android.content.ComponentName;
 import android.content.Context;
-import android.content.ContextWrapper;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -134,6 +133,7 @@ import ch.deletescape.lawnchair.util.ViewOnDrawExecutor;
 import ch.deletescape.lawnchair.widget.PendingAddWidgetInfo;
 import ch.deletescape.lawnchair.widget.WidgetHostViewLoader;
 import ch.deletescape.lawnchair.widget.WidgetsContainerView;
+import ch.deletescape.wallpaperpicker.WallpaperPickerActivity;
 
 /**
  * Default launcher application.
@@ -332,6 +332,8 @@ public class Launcher extends Activity
 
     private PopupDataProvider mPopupDataProvider;
 
+    private boolean mDisableEditing;
+
     @Thunk
     Runnable mBuildLayersRunnable = new Runnable() {
         @Override
@@ -358,10 +360,10 @@ public class Launcher extends Activity
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        FeatureFlags.applyDarkThemePreference(this);
+        FeatureFlags.INSTANCE.loadDarkThemePreference(this);
         super.onCreate(savedInstanceState);
 
-        SetScreenOrientation();
+        setScreenOrientation();
 
         if(!BuildConfig.MOBILE_CENTER_KEY.equalsIgnoreCase("null"))
             MobileCenter.start(getApplication(), BuildConfig.MOBILE_CENTER_KEY, Analytics.class, Crashes.class, Distribute.class);
@@ -370,7 +372,10 @@ public class Launcher extends Activity
         app.setMLauncher(this);
 
         // Load configuration-specific DeviceProfile
-        mDeviceProfile = app.getInvariantDeviceProfile().profile;
+        mDeviceProfile = getResources().getConfiguration().orientation
+                == Configuration.ORIENTATION_LANDSCAPE ?
+                app.getInvariantDeviceProfile().landscapeProfile
+                : app.getInvariantDeviceProfile().portraitProfile;
 
         mSharedPrefs = Utilities.getPrefs(this);
         mIsSafeModeEnabled = getPackageManager().isSafeMode();
@@ -395,7 +400,7 @@ public class Launcher extends Activity
 
         setContentView(R.layout.launcher);
 
-        mPlanesEnabled = FeatureFlags.planes(this);
+        mPlanesEnabled = FeatureFlags.INSTANCE.planes(this);
         setupViews();
         mDeviceProfile.layout(this, false /* notifyListeners */);
         mExtractedColors = new ExtractedColors();
@@ -435,14 +440,11 @@ public class Launcher extends Activity
         Utilities.showChangelog(this);
     }
 
-    private void SetScreenOrientation() {
-        if(FeatureFlags.enableScreenRotation(this))
-        {
-            setRequestedOrientation (ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
-        }
-        else {
-
-            setRequestedOrientation (ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+    private void setScreenOrientation() {
+        if(FeatureFlags.INSTANCE.enableScreenRotation(this)) {
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
+        } else {
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         }
     }
 
@@ -851,7 +853,7 @@ public class Launcher extends Activity
     protected void onResume() {
         super.onResume();
 
-        SetScreenOrientation();
+        setScreenOrientation();
         // Restore the previous launcher state
         if (mOnResumeState == State.WORKSPACE) {
             showWorkspace(false);
@@ -932,11 +934,12 @@ public class Launcher extends Activity
             updateWallpaper = false;
             mBlurWallpaperProvider.updateAsync();
         }
+
+        mDisableEditing = !FeatureFlags.INSTANCE.enableEditing(this);
     }
 
     @Override
-    public void onConfigurationChanged(Configuration newConfig)
-    {
+    public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
 
         mBlurWallpaperProvider.updateAsync();
@@ -1149,7 +1152,7 @@ public class Launcher extends Activity
         setupOverviewPanel();
 
         // Setup the workspace
-        mWorkspace.setHapticFeedbackEnabled(FeatureFlags.enableHapticFeedback(this));
+        mWorkspace.setHapticFeedbackEnabled(FeatureFlags.INSTANCE.enableHapticFeedback(this));
         mWorkspace.setOnLongClickListener(this);
         mWorkspace.setup(mDragController);
         // Until the workspace is bound, ensure that we keep the wallpaper offset locked to the
@@ -1650,7 +1653,7 @@ public class Launcher extends Activity
             // If we are already on home, then just animate back to the workspace,
             // otherwise, just wait until onResume to set the state back to Workspace
             if (alreadyOnHome) {
-                if (!FeatureFlags.homeOpensDrawer(this) || mState != State.WORKSPACE || mWorkspace.getCurrentPage() != 0 || mOverviewPanel.getVisibility() == View.VISIBLE) {
+                if (!FeatureFlags.INSTANCE.homeOpensDrawer(this) || mState != State.WORKSPACE || mWorkspace.getCurrentPage() != 0 || mOverviewPanel.getVisibility() == View.VISIBLE) {
                     showWorkspace(true);
                 } else {
                     showAppsView(true, false);
@@ -1668,7 +1671,7 @@ public class Launcher extends Activity
             }
 
             // Reset the apps view
-            if (!alreadyOnHome && mAppsView != null && !FeatureFlags.keepScrollState(this)) {
+            if (!alreadyOnHome && mAppsView != null && !FeatureFlags.INSTANCE.keepScrollState(this)) {
                 mAppsView.scrollToTop();
             }
 
@@ -1889,6 +1892,10 @@ public class Launcher extends Activity
 
     public boolean isWorkspaceLocked() {
         return mWorkspaceLoading || mPendingRequestArgs != null;
+    }
+
+    public boolean isEditingDisabled() {
+        return mDisableEditing;
     }
 
     public boolean isWorkspaceLoading() {
@@ -2402,11 +2409,11 @@ public class Launcher extends Activity
         boolean useGoogleWallpaper =
                 PackageManagerHelper.isAppEnabled(getPackageManager(), "com.google.android.apps.wallpaper", 0);
         getPackageManager().setComponentEnabledSetting(
-                new ComponentName(this, "ch.deletescape.wallpaperpicker.WallpaperPickerActivity"),
+                new ComponentName(this, WallpaperPickerActivity.class),
                 useGoogleWallpaper ? PackageManager.COMPONENT_ENABLED_STATE_DISABLED : PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
                 PackageManager.DONT_KILL_APP);
 
-        String pickerPackage = useGoogleWallpaper ? "com.google.android.apps.wallpaper" : "ch.deletescape.lawnchair";
+        String pickerPackage = useGoogleWallpaper ? "com.google.android.apps.wallpaper" : getApplicationInfo().packageName;
         Intent intent = new Intent(Intent.ACTION_SET_WALLPAPER)
                 .setPackage(pickerPackage)
                 .putExtra(Utilities.EXTRA_WALLPAPER_OFFSET, offset);
@@ -3205,7 +3212,7 @@ public class Launcher extends Activity
     @Override
     public void bindScreens(ArrayList<Long> orderedScreenIds) {
         // Make sure the first screen is always at the start.
-        if (FeatureFlags.showPixelBar(this) && orderedScreenIds.indexOf(Workspace.FIRST_SCREEN_ID) != 0) {
+        if (FeatureFlags.INSTANCE.showPixelBar(this) && orderedScreenIds.indexOf(Workspace.FIRST_SCREEN_ID) != 0) {
             orderedScreenIds.remove(Workspace.FIRST_SCREEN_ID);
             orderedScreenIds.add(0, Workspace.FIRST_SCREEN_ID);
             mModel.updateWorkspaceScreenOrder(this, orderedScreenIds);
@@ -3623,6 +3630,17 @@ public class Launcher extends Activity
         return bounceAnim;
     }
 
+    public boolean useVerticalBarLayout() {
+        return mDeviceProfile.isVerticalBarLayout();
+    }
+
+/*    public int getSearchBarHeight() {
+        if (mLauncherCallbacks != null) {
+            return mLauncherCallbacks.getSearchBarHeight();
+        }
+        return LauncherCallbacks.SEARCH_BAR_HEIGHT_NORMAL;
+    }*/
+
     /**
      * A runnable that we can dequeue and re-enqueue when all applications are bound (to prevent
      * multiple calls to bind the same list.)
@@ -3931,7 +3949,7 @@ public class Launcher extends Activity
         if (context instanceof Launcher) {
             return (Launcher) context;
         }
-        return ((Launcher) ((ContextWrapper) context).getBaseContext());
+        return LauncherAppState.getInstance().getLauncher();
     }
 
     /**

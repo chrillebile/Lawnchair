@@ -53,7 +53,6 @@
             android:excludeFromRecents="true"
             android:launchMode="singleTask"
             android:resumeWhilePausing="true"
-            android:screenOrientation="portrait"
             android:stateNotNeeded="true"
             android:taskAffinity=""
             android:theme="@style/LauncherTheme"
@@ -122,13 +121,6 @@
         <receiver android:name=".AppWidgetsRestoredReceiver">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_HOST_RESTORED" />
-            </intent-filter>
-        </receiver>
-        <receiver
-            android:name=".pixelify.WeatherUpdateReciever"
-            android:permission="android.permission.CAPTURE_AUDIO_HOTWORD">
-            <intent-filter>
-                <action android:name="com.google.android.apps.nexuslauncher.updateweather" />
             </intent-filter>
         </receiver>
 

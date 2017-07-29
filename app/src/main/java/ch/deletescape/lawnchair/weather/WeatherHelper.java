@@ -1,5 +1,6 @@
 package ch.deletescape.lawnchair.weather;
 
+import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -7,7 +8,9 @@ import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Handler;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.kwabenaberko.openweathermaplib.implementation.OpenWeatherMapHelper;
 import com.kwabenaberko.openweathermaplib.models.CurrentWeather;
@@ -15,11 +18,14 @@ import com.kwabenaberko.openweathermaplib.models.CurrentWeather;
 import java.util.Locale;
 
 import ch.deletescape.lawnchair.BuildConfig;
+import ch.deletescape.lawnchair.Launcher;
+import ch.deletescape.lawnchair.LauncherAppState;
+import ch.deletescape.lawnchair.R;
 import ch.deletescape.lawnchair.Utilities;
 
 public class WeatherHelper implements OpenWeatherMapHelper.CurrentWeatherCallback, SharedPreferences.OnSharedPreferenceChangeListener, Runnable {
-    private static final String KEY_UNITS = "pref_weatherDebug_units";
-    private static final String KEY_CITY = "pref_weatherDebug_city";
+    private static final String KEY_UNITS = "pref_weather_units";
+    private static final String KEY_CITY = "pref_weather_city";
     private static final int DELAY = 30 * 3600 * 1000;
     private TextView mTemperatureView;
     private boolean mIsImperial;
@@ -28,9 +34,15 @@ public class WeatherHelper implements OpenWeatherMapHelper.CurrentWeatherCallbac
     private String mTemp;
     private OpenWeatherMapHelper mHelper;
     private Handler mHandler;
+    private String mIcon;
+    private ImageView mIconView;
+    private WeatherIconProvider iconProvider;
+    private boolean stopped = false;
 
-    public WeatherHelper(TextView temperatureView, Context context) {
+    public WeatherHelper(TextView temperatureView, ImageView iconView, Context context) {
         mTemperatureView = temperatureView;
+        mIconView = iconView;
+        iconProvider = new WeatherIconProvider(context);
         setupOnClickListener(context);
         mHandler = new Handler();
         mHelper = new OpenWeatherMapHelper();
@@ -42,8 +54,10 @@ public class WeatherHelper implements OpenWeatherMapHelper.CurrentWeatherCallbac
     }
 
     private void refresh() {
-        mHelper.getCurrentWeatherByCityName(mCity, this);
-        mHandler.postDelayed(this, DELAY);
+        if (!stopped) {
+            mHelper.getCurrentWeatherByCityName(mCity, this);
+            mHandler.postDelayed(this, DELAY);
+        }
     }
 
     private String makeTemperatureString(String string) {
@@ -53,17 +67,25 @@ public class WeatherHelper implements OpenWeatherMapHelper.CurrentWeatherCallbac
     @Override
     public void onSuccess(CurrentWeather currentWeather) {
         mTemp = String.format(Locale.US, "%.0f", currentWeather.getMain().getTemp());
+        mIcon = currentWeather.getWeatherArray().get(0).getIcon();
         updateTextView();
+        updateIconView();
     }
 
     @Override
     public void onFailure(Throwable throwable) {
         mTemp = (mTemp != null && !mTemp.equals("ERROR")) ? mTemp : "ERROR";
+        mIcon = "-1";
         updateTextView();
+        updateIconView();
     }
 
     private void updateTextView() {
         mTemperatureView.setText(makeTemperatureString(mTemp));
+    }
+
+    private void updateIconView() {
+        mIconView.setImageDrawable(iconProvider.getIcon(mIcon));
     }
 
     private void setCity(String city) {
@@ -80,11 +102,17 @@ public class WeatherHelper implements OpenWeatherMapHelper.CurrentWeatherCallbac
         mTemperatureView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Intent intent = new Intent(Intent.ACTION_VIEW);
-                intent.setData(Uri.parse("dynact://velour/weather/ProxyActivity"));
-                intent.setComponent(new ComponentName("com.google.android.googlequicksearchbox",
-                        "com.google.android.apps.gsa.velour.DynamicActivityTrampoline"));
-                context.startActivity(intent);
+                try {
+                    Launcher launcher = LauncherAppState.getInstance().getLauncher();
+                    Intent intent = new Intent(Intent.ACTION_VIEW);
+                    intent.setData(Uri.parse("dynact://velour/weather/ProxyActivity"));
+                    intent.setComponent(new ComponentName("com.google.android.googlequicksearchbox",
+                            "com.google.android.apps.gsa.velour.DynamicActivityTrampoline"));
+                    intent.setSourceBounds(launcher.getViewBounds(mTemperatureView));
+                    context.startActivity(intent, launcher.getActivityLaunchOptions(mTemperatureView));
+                } catch (ActivityNotFoundException | IllegalArgumentException e) {
+                    Toast.makeText(context, R.string.activity_not_found, Toast.LENGTH_SHORT).show();
+                }
             }
         });
     }
@@ -105,5 +133,10 @@ public class WeatherHelper implements OpenWeatherMapHelper.CurrentWeatherCallbac
     @Override
     public void run() {
         refresh();
+    }
+
+    public void stop() {
+        stopped = true;
+        mHandler.removeCallbacks(this);
     }
 }
