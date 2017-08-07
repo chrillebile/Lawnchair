@@ -72,6 +72,8 @@ import android.view.View.OnClickListener;
 import android.view.View.OnLongClickListener;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
+import android.view.Window;
+import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityManager;
 import android.view.animation.OvershootInterpolator;
@@ -366,7 +368,7 @@ public class Launcher extends Activity
 
         setScreenOrientation();
 
-        if(!BuildConfig.MOBILE_CENTER_KEY.equalsIgnoreCase("null"))
+        if (!BuildConfig.MOBILE_CENTER_KEY.equalsIgnoreCase("null"))
             MobileCenter.start(getApplication(), BuildConfig.MOBILE_CENTER_KEY, Analytics.class, Crashes.class, Distribute.class);
 
         LauncherAppState app = LauncherAppState.getInstance();
@@ -436,13 +438,22 @@ public class Launcher extends Activity
             mSharedPrefs.edit().putBoolean("requiresIconCacheReload", false).apply();
             reloadIcons();
         }
+
+        Window window = getWindow();
+        WindowManager.LayoutParams attributes = window.getAttributes();
+        attributes.systemUiVisibility |= (View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
+        window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS | WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION);
+        window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+        window.setStatusBarColor(0);
+        window.setNavigationBarColor(0);
+
         Settings.init(this);
 
         Utilities.showChangelog(this);
     }
 
     private void setScreenOrientation() {
-        if(FeatureFlags.INSTANCE.enableScreenRotation(this)) {
+        if (FeatureFlags.INSTANCE.enableScreenRotation(this)) {
             setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
         } else {
             setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
