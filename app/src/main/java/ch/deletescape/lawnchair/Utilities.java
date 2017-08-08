@@ -903,17 +903,6 @@ public final class Utilities {
         return android.os.Process.myUserHandle();
     }
 
-    public static Bitmap addNotificationBadgeToIcon(Bitmap icon) {
-        Bitmap b = icon.copy(Bitmap.Config.ARGB_8888, true);
-        Canvas c = new Canvas(b);
-        Paint badgePaint = new Paint();
-        badgePaint.setStyle(Paint.Style.FILL);
-        badgePaint.setColor(Utilities.getColorAccent(LauncherAppState.getInstance().getContext()));
-        int radius = b.getWidth() / 12;
-        c.drawCircle(b.getWidth() - (radius + 15), radius + 15, radius, badgePaint);
-        return b;
-    }
-
     public static <T> HashSet<T> singletonHashSet(T obj) {
         HashSet<T> hashSet = new HashSet<>(1);
         hashSet.add(obj);
@@ -980,7 +969,7 @@ public final class Utilities {
         String[] lines = BuildConfig.CHANGELOG.split("\n");
         for (String line : lines) {
             if (line.startsWith("Merge pull request")) continue;
-            if (line.startsWith("[no ci]")) {
+            if (line.contains("[no ci]")) {
                 line = line.replace("[no ci]", "");
             }
             builder
@@ -1005,7 +994,11 @@ public final class Utilities {
         return context.getPackageManager().getApplicationIcon(context.getApplicationInfo());
     }
 
-    @SuppressWarnings("unchecked")
+    public static boolean isAwarenessApiEnabled(Context context) {
+        SharedPreferences prefs = getPrefs(context);
+        return "1".equals(prefs.getString("pref_weatherProvider", "0"));
+    }
+
     public static <T> List<T> emptyList() {
         return Collections.EMPTY_LIST;
     }
