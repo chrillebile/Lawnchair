@@ -107,6 +107,7 @@ public class DeviceProfile {
     public int hotseatCellHeightPx;
     public int hotseatIconSizePx;
     public int hotseatIconSizePxOriginal;
+    public int hotseatIconDrawablePaddingPx;
     private int hotseatBarHeightPx;
     private int hotseatBarTopPaddingPx;
     private int hotseatLandGutterPx;
@@ -268,7 +269,7 @@ public class DeviceProfile {
             allAppsDrawablePadding = 0;
         }
         float usedHotseatWidth = (hotseatCellWidthPx * inv.numHotseatIcons);
-        float maxHotseatWidth = maxWorkspaceWidth - getHotseatAdjustment();
+        float maxHotseatWidth = availableWidthPx - getHotseatAdjustment();
         if (usedAllAppsWidth > maxHotseatWidth) {
             hotseatScale = maxHotseatWidth / usedHotseatWidth;
         }
@@ -282,6 +283,7 @@ public class DeviceProfile {
         iconTextSizePx = (int) (Utilities.pxFromSp(inv.iconTextSize, dm) * workspaceScale);
         iconDrawablePaddingPx = workspaceDrawablePadding;
         hotseatIconSizePx = (int) (Utilities.pxFromDp(inv.hotseatIconSize, dm) * hotseatScale);
+        hotseatIconDrawablePaddingPx = (int) (iconDrawablePaddingOriginalPx * hotseatScale);
         hotseatIconSizePxOriginal = (int) (Utilities.pxFromDp(inv.hotseatIconSizeOriginal, dm) * hotseatScale);
         allAppsIconSizePx = (int) (Utilities.pxFromDp(inv.allAppsIconSize, dm) * allAppsScale);
         allAppsIconDrawablePaddingPx = allAppsDrawablePadding;
@@ -300,7 +302,7 @@ public class DeviceProfile {
 
         // Hotseat
         hotseatCellWidthPx = hotseatIconSizePx;
-        hotseatCellHeightPx = hotseatIconSizePx;
+        hotseatCellHeightPx = hotseatIconSizePx + hotseatIconDrawablePaddingPx;
 
         if (!isVerticalBarLayout()) {
             int expectedWorkspaceHeight = availableHeightPx - getHotseatHeight()
@@ -667,6 +669,6 @@ public class DeviceProfile {
     }
 
     public final int getHotseatHeight() {
-        return (hotseatBarHeightPx - hotseatIconSizePxOriginal) + hotseatIconSizePx;
+        return (hotseatBarHeightPx - iconSizePxOriginal) + hotseatCellHeightPx;
     }
 }
