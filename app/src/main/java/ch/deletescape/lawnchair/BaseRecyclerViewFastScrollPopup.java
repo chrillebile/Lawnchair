@@ -25,7 +25,6 @@ import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 
-import ch.deletescape.lawnchair.config.FeatureFlags;
 import ch.deletescape.lawnchair.dynamicui.ExtractedColors;
 
 /**
@@ -69,17 +68,13 @@ public class BaseRecyclerViewFastScrollPopup {
         mBg.setBounds(0, 0, mBgOriginalSize, mBgOriginalSize);
 
         mTextPaint = new Paint();
-        mTextPaint.setColor(Color.WHITE);
         mTextPaint.setAntiAlias(true);
         mTextPaint.setTextSize(res.getDimensionPixelSize(R.dimen.container_fastscroll_popup_text_size));
 
-        if (FeatureFlags.INSTANCE.isDynamicUiEnabled(rv.getContext())) {
-            int tint = Utilities.getDynamicAccent(rv.getContext());
-            if (tint != -1) {
-                mBg.setTint(tint);
-                mTextPaint.setColor(Utilities.getColor(rv.getContext(), ExtractedColors.VIBRANT_FOREGROUND_INDEX, Color.WHITE));
-            }
+        if (Utilities.getThemer().allAppsFastScrollerPopupTintColor(rv.getContext()) != null) {
+            mBg.setTint(Utilities.getThemer().allAppsFastScrollerPopupTintColor(rv.getContext()));
         }
+        mTextPaint.setColor(Utilities.getThemer().allAppsFastScrollerPopupTextColor(rv.getContext()));
 
         mShadowPaint = new Paint();
         mShadowPaint.setAntiAlias(true);

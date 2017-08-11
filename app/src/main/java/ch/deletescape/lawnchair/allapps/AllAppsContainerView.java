@@ -135,7 +135,7 @@ public class AllAppsContainerView extends BaseContainerView implements DragSourc
         }
         mSearchQueryBuilder = new SpannableStringBuilder();
         Selection.setSelection(mSearchQueryBuilder, 0);
-        mUseRoundSearchBar = FeatureFlags.INSTANCE.useRoundSearchBar(context);
+        mUseRoundSearchBar = Utilities.getPrefs(context).useRoundSearchBar();
     }
 
     /**
@@ -240,7 +240,7 @@ public class AllAppsContainerView extends BaseContainerView implements DragSourc
      */
     public void reset() {
         // Reset the search bar and base recycler view after transitioning home
-        if (!FeatureFlags.INSTANCE.keepScrollState(getContext())) {
+        if (!Utilities.getPrefs(getContext()).keepScrollState()) {
             scrollToTop();
         }
         mSearchBarController.reset();
@@ -264,10 +264,14 @@ public class AllAppsContainerView extends BaseContainerView implements DragSourc
 
         mSearchContainer = findViewById(R.id.search_container);
         mSearchInput = findViewById(R.id.search_box_input);
-        int accent = Utilities.getDynamicAccent(getContext());
+        int hintAndCursorColor = Utilities.getThemer().allAppsSearchBarHintTextColor(getContext());
         if (!mUseRoundSearchBar)
-            mSearchInput.setHintTextColor(accent);
-        mSearchInput.setCursorColor(accent);
+            mSearchInput.setHintTextColor(hintAndCursorColor);
+        mSearchInput.setCursorColor(hintAndCursorColor);
+
+        if (Utilities.getThemer().allAppsSearchTextColor(getContext()) != null) {
+            mSearchInput.setTextColor(Utilities.getThemer().allAppsSearchTextColor(getContext()));
+        }
 
         // Update the hint to contain the icon.
         // Prefix the original hint with two spaces. The first space gets replaced by the icon
@@ -650,8 +654,8 @@ public class AllAppsContainerView extends BaseContainerView implements DragSourc
         mAllAppsBackground.setBlurOpacity(opacity);
     }
 
-    public void setAppIconTextColor(int color) {
-        mAdapter.setAppIconTextColor(color);
+    public void setAppIconTextStyle(int color, int maxLines) {
+        mAdapter.setAppIconTextStyle(color, maxLines);
         mAdapter.notifyDataSetChanged();
     }
 }
