@@ -52,7 +52,6 @@ import ch.deletescape.lawnchair.folder.FolderIcon;
 import ch.deletescape.lawnchair.graphics.IconPalette;
 import ch.deletescape.lawnchair.model.PackageItemInfo;
 import ch.deletescape.lawnchair.pixelify.ClockIconDrawable;
-import ch.deletescape.lawnchair.preferences.PreferenceFlags;
 
 /**
  * TextView that draws a bubble behind the text. We cannot use a LineBackgroundSpan
@@ -244,7 +243,11 @@ public class BubbleTextView extends TextView
     }
 
     public void applyFromApplicationInfo(AppInfo info) {
-        applyIconAndLabel(info.iconBitmap, info);
+        applyFromApplicationInfo(info, true);
+    }
+
+    public void applyFromApplicationInfo(AppInfo info, boolean enableStates) {
+        applyIconAndLabel(info.iconBitmap, info, enableStates);
         applyClockIcon(info.getTargetComponent());
 
         // We don't need to check the info since it's not a ShortcutInfo
@@ -265,7 +268,12 @@ public class BubbleTextView extends TextView
     }
 
     private void applyIconAndLabel(Bitmap icon, ItemInfo info) {
+        applyIconAndLabel(icon, info, true);
+    }
+
+    private void applyIconAndLabel(Bitmap icon, ItemInfo info, boolean enableStates) {
         FastBitmapDrawable iconDrawable = mLauncher.createIconDrawable(icon);
+        iconDrawable.setEnableStates(enableStates);
         if (info.isDisabled()) {
             iconDrawable.setState(FastBitmapDrawable.State.DISABLED);
         }
@@ -692,14 +700,16 @@ public class BubbleTextView extends TextView
     public void reapplyItemInfo(final ItemInfo info) {
         if (getTag() == info) {
             FastBitmapDrawable.State prevState = FastBitmapDrawable.State.NORMAL;
+            boolean enableStates = true;
             if (mIcon instanceof FastBitmapDrawable) {
                 prevState = ((FastBitmapDrawable) mIcon).getCurrentState();
+                enableStates = ((FastBitmapDrawable) mIcon).getEnableStates();
             }
             mIconLoadRequest = null;
             mDisableRelayout = true;
 
             if (info instanceof AppInfo) {
-                applyFromApplicationInfo((AppInfo) info);
+                applyFromApplicationInfo((AppInfo) info, enableStates);
             } else if (info instanceof ShortcutInfo) {
                 applyFromShortcutInfo((ShortcutInfo) info);
                 if ((info.rank < FolderIcon.NUM_ITEMS_IN_PREVIEW) && (info.container >= 0)) {

@@ -20,12 +20,11 @@ import android.animation.ObjectAnimator;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 
-import ch.deletescape.lawnchair.dynamicui.ExtractedColors;
+import ch.deletescape.lawnchair.allapps.theme.IAllAppsThemer;
 
 /**
  * The fast scroller popup that shows the section name the list will jump to.
@@ -71,10 +70,12 @@ public class BaseRecyclerViewFastScrollPopup {
         mTextPaint.setAntiAlias(true);
         mTextPaint.setTextSize(res.getDimensionPixelSize(R.dimen.container_fastscroll_popup_text_size));
 
-        if (Utilities.getThemer().allAppsFastScrollerPopupTintColor(rv.getContext()) != null) {
-            mBg.setTint(Utilities.getThemer().allAppsFastScrollerPopupTintColor(rv.getContext()));
+        IAllAppsThemer theme = Utilities.getThemer().allAppsTheme(rv.getContext());
+
+        if (theme.getFastScrollerPopupTintColor() != 0) {
+            mBg.setTint(theme.getFastScrollerPopupTintColor());
         }
-        mTextPaint.setColor(Utilities.getThemer().allAppsFastScrollerPopupTextColor(rv.getContext()));
+        mTextPaint.setColor(theme.getFastScrollerPopupTextColor());
 
         mShadowPaint = new Paint();
         mShadowPaint.setAntiAlias(true);

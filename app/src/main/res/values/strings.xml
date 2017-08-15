@@ -481,7 +481,6 @@
     <string name="pref_cat_drawer">Drawer</string>
     <string name="shortcut_backport_warning">This could be slow, use at your own risk</string>
     <string name="pref_backport_shortcuts">Backport shortcuts</string>
-    <string name="weather_api_key_set">API key set</string>
     <string name="weather_api_key_not_set">API key not set</string>
     <string name="pref_weather_api_key_title">API key</string>
     <string name="about_changelog">Changelog</string>
@@ -490,4 +489,10 @@
     <string name="pref_all_apps_label_color">Color of icon labels in drawer</string>
     <string name="pref_num_rows_drawer">Number of rows in drawer</string>
     <string name="center_wallpaper_pref_title">Center wallpaper when there is only one page</string>
+    <string name="vertical_drawer_layout_pref_title">Display as vertical list</string>
+
+    <!-- Time format for Weather Widget -->
+    <!-- EEEE is the weekday name, MMMM the month name and d the day of the month -->
+    <string name="full_wday_month_day_no_year">EEEE, MMMM d</string>
+    <string name="about_translators">Translators</string>
 </resources>

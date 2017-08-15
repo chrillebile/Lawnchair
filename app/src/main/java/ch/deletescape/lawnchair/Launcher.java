@@ -98,6 +98,7 @@ import ch.deletescape.lawnchair.DropTarget.DragObject;
 import ch.deletescape.lawnchair.LauncherSettings.Favorites;
 import ch.deletescape.lawnchair.accessibility.LauncherAccessibilityDelegate;
 import ch.deletescape.lawnchair.allapps.AllAppsContainerView;
+import ch.deletescape.lawnchair.allapps.AllAppsIconRowView;
 import ch.deletescape.lawnchair.allapps.AllAppsTransitionController;
 import ch.deletescape.lawnchair.allapps.DefaultAppSearchController;
 import ch.deletescape.lawnchair.blur.BlurWallpaperProvider;
@@ -105,7 +106,6 @@ import ch.deletescape.lawnchair.compat.AppWidgetManagerCompat;
 import ch.deletescape.lawnchair.compat.LauncherAppsCompat;
 import ch.deletescape.lawnchair.compat.UserManagerCompat;
 import ch.deletescape.lawnchair.config.FeatureFlags;
-import ch.deletescape.lawnchair.config.PreferenceProvider;
 import ch.deletescape.lawnchair.dragndrop.DragController;
 import ch.deletescape.lawnchair.dragndrop.DragLayer;
 import ch.deletescape.lawnchair.dragndrop.DragOptions;
@@ -113,6 +113,7 @@ import ch.deletescape.lawnchair.dragndrop.DragView;
 import ch.deletescape.lawnchair.dynamicui.ExtractedColors;
 import ch.deletescape.lawnchair.folder.Folder;
 import ch.deletescape.lawnchair.folder.FolderIcon;
+import ch.deletescape.lawnchair.iconpack.EditIconActivity;
 import ch.deletescape.lawnchair.keyboard.CustomActionsPopup;
 import ch.deletescape.lawnchair.keyboard.ViewGroupFocusHelper;
 import ch.deletescape.lawnchair.model.WidgetsModel;
@@ -121,6 +122,7 @@ import ch.deletescape.lawnchair.overlay.ILauncherClient;
 import ch.deletescape.lawnchair.popup.PopupContainerWithArrow;
 import ch.deletescape.lawnchair.popup.PopupDataProvider;
 import ch.deletescape.lawnchair.preferences.IPreferenceProvider;
+import ch.deletescape.lawnchair.preferences.PreferenceProvider;
 import ch.deletescape.lawnchair.settings.Settings;
 import ch.deletescape.lawnchair.shortcuts.DeepShortcutManager;
 import ch.deletescape.lawnchair.shortcuts.ShortcutKey;
@@ -158,6 +160,8 @@ public class Launcher extends Activity
     private static final int REQUEST_RECONFIGURE_APPWIDGET = 12;
 
     private static final int REQUEST_PERMISSION_CALL_PHONE = 13;
+
+    private static final int REQUEST_EDIT_ICON = 14;
 
     private static final float BOUNCE_ANIMATION_TENSION = 1.3f;
 
@@ -355,10 +359,9 @@ public class Launcher extends Activity
     private PendingRequestArgs mPendingRequestArgs;
 
     public ViewGroupFocusHelper mFocusHandler;
-
     private BlurWallpaperProvider mBlurWallpaperProvider;
-
     private LauncherDialog mCurrentDialog;
+    private EditableItemInfo mEditingItem;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -644,6 +647,16 @@ public class Launcher extends Activity
                         EXIT_SPRINGLOADED_MODE_SHORT_TIMEOUT, null);
             }
         };
+
+        if (requestCode == REQUEST_EDIT_ICON) {
+            if (data != null && data.hasExtra("alternateIcon")) {
+                mEditingItem.setIcon(this, data.getStringExtra("alternateIcon"));
+            } else {
+                mEditingItem.setIcon(this, null);
+            }
+            if (mEditingItem.getComponentName() != null)
+                Utilities.updatePackage(this, mEditingItem.getUser(), mEditingItem.getComponentName().getPackageName());
+        }
 
         if (requestCode == REQUEST_BIND_APPWIDGET) {
             // This is called only if the user did not previously have permissions to bind widgets
@@ -2183,6 +2196,9 @@ public class Launcher extends Activity
             }
             return;
         }
+
+        if (v instanceof AllAppsIconRowView)
+            v = ((AllAppsIconRowView) v).icon;
 
         Object tag = v.getTag();
         if (tag instanceof ShortcutInfo) {
@@ -3952,7 +3968,7 @@ public class Launcher extends Activity
         mCurrentDialog = null;
     }
 
-    public static Launcher getLauncher(Context context) {
+    @NonNull public static Launcher getLauncher(Context context) {
         if (context instanceof Launcher) {
             return (Launcher) context;
         }
@@ -3964,6 +3980,14 @@ public class Launcher extends Activity
      */
     public void setLauncherOverlay(LauncherOverlay overlay) {
         mWorkspace.setLauncherOverlay(overlay);
+    }
+
+    public void startEditIcon(EditableItemInfo info) {
+        mEditingItem = info;
+        setWaitingForResult(new PendingRequestArgs((ItemInfo) mEditingItem));
+        Intent intent = new Intent(this, EditIconActivity.class);
+        intent.putExtra("itemInfo", info);
+        startActivityForResult(intent, REQUEST_EDIT_ICON);
     }
 
     public ILauncherClient getClient() {
