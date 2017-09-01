@@ -99,7 +99,7 @@ public class ShortcutsItemView extends PopupItemView implements View.OnLongClick
         // Return early if this is not initiated from a touch or not the correct view
         if (!v.isInTouchMode() || !(v.getParent() instanceof DeepShortcutView)) return false;
         // Return early if global dragging is not enabled
-        if (!mLauncher.isDraggingEnabled()) return false;
+        if (!mLauncher.isDraggingEnabled() || mLauncher.isEditingDisabled()) return false;
         // Return early if an item is already being dragged (e.g. when long-pressing two shortcuts)
         if (mLauncher.getDragController().isDragging()) return false;
 
@@ -112,7 +112,7 @@ public class ShortcutsItemView extends PopupItemView implements View.OnLongClick
         mIconShift.y = mIconLastTouchPos.y - mLauncher.getDeviceProfile().iconSizePx;
 
         DragView dv = mLauncher.getWorkspace().beginDragShared(sv.getIconView(),
-                (PopupContainerWithArrow) getParent(), sv.getFinalInfo(),
+                getContainer(), sv.getFinalInfo(),
                 new ShortcutDragPreviewProvider(sv.getIconView(), mIconShift), new DragOptions());
         dv.animateShift(-mIconShift.x, -mIconShift.y);
 
@@ -196,7 +196,7 @@ public class ShortcutsItemView extends PopupItemView implements View.OnLongClick
                 // reopen the container to ensure measurements etc. all work out. While this could
                 // be quite janky, in practice the user would typically see a small flicker as the
                 // animation restarts partway through, and this is a very rare edge case anyway.
-                ((PopupContainerWithArrow) getParent()).close(false);
+                getContainer().close(false);
                 PopupContainerWithArrow.showForIcon(originalIcon);
             }
         } else if (onClickListener == null && widgetsView != null) {

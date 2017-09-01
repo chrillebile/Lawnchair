@@ -48,6 +48,8 @@ android {
         buildConfigField "boolean", "AWARENESS_API_ENABLED", ext.awarenessApiKey ? "true" : "false"
         manifestPlaceholders = [awarenessApiKey: ext.awarenessApiKey ?: "null"]
 
+        buildConfigField "boolean", "ENABLE_LAWNFEED", localProps.getProperty('useLawnfeed') ?: System.getenv("USE_LAWNFEED") ?: "false"
+
         if (System.getenv("TRAVIS") == "true") {
             versionCode = Integer.valueOf(System.getenv("TRAVIS_BUILD_NUMBER"))
             versionName = System.getenv("MAJOR_MINOR") + "." + System.getenv("TRAVIS_BUILD_NUMBER")
@@ -77,7 +79,7 @@ android {
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     def mobileCenterSdkVersion = '0.10.0'
-    def supportLibVersion = '26.0.1'
+    def supportLibVersion = '26.0.2'
     implementation "com.microsoft.azure.mobile:mobile-center-analytics:${mobileCenterSdkVersion}"
     implementation "com.microsoft.azure.mobile:mobile-center-crashes:${mobileCenterSdkVersion}"
     implementation "com.microsoft.azure.mobile:mobile-center-distribute:${mobileCenterSdkVersion}"
